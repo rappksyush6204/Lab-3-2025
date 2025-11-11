@@ -62,7 +62,7 @@ public class ArrayTabulatedFunction implements TabulatedFunction {
     public double getFunctionValue(double x) {
         // Проверка что x в области определения
         if (x < getLeftDomainBorder() || x > getRightDomainBorder()) {
-            return Double.NaN;  // Не число -точка вне области определения
+            return Double.NaN;  // Не число - точка вне области определения
         }
 
         // Ищем интервал, в который попадает x
@@ -70,11 +70,21 @@ public class ArrayTabulatedFunction implements TabulatedFunction {
             double x1 = points[i].getX();
             double x2 = points[i + 1].getX();
             
-            if (x >= x1 && x <= x2) {
+            // Проверяем совпадение с x1 (используя машинный эпсилон)
+            if (Math.abs(x - x1) < 1e-10) {
+                return points[i].getY();
+            }
+            
+            // Проверяем совпадение с x2 (используя машинный эпсилон)
+            if (Math.abs(x - x2) < 1e-10) {
+                return points[i + 1].getY();
+            }
+            
+            if (x > x1 && x < x2) {
                 double y1 = points[i].getY();
                 double y2 = points[i + 1].getY();
                 
-                //уравнение прямой, проходящей через две точки
+                // Линейная интерполяция
                 return y1 + (y2 - y1) * (x - x1) / (x2 - x1);
             }
         }
@@ -103,15 +113,14 @@ public class ArrayTabulatedFunction implements TabulatedFunction {
             throw new FunctionPointIndexOutOfBoundsException("Индекс " + index + " выходит за границы набора точек");
         }
 
-        // Проверяем,что новая x координата находится между соседями
-        if (index > 0 && point.getX() <= points[index - 1].getX()) {
+        // Улучшенная проверка с машинным эпсилоном
+        if (index > 0 && point.getX() <= points[index - 1].getX() + 1e-10) {
             throw new InappropriateFunctionPointException("Новая точка нарушает порядок: x должен быть больше " + points[index - 1].getX()); 
         }
-        if (index < pointsCount - 1 && point.getX() >= points[index + 1].getX()) {
+        if (index < pointsCount - 1 && point.getX() >= points[index + 1].getX() - 1e-10) {
             throw new InappropriateFunctionPointException("Новая точка нарушает порядок: x должен быть меньше " + points[index + 1].getX());
         }
 
-        // Заменяем координаты точки (создаем копию)
         points[index].setX(point.getX());
         points[index].setY(point.getY());
     }
@@ -130,15 +139,15 @@ public class ArrayTabulatedFunction implements TabulatedFunction {
             throw new FunctionPointIndexOutOfBoundsException("Точка с индексом " + index + " не существует. Доступные индексы: 0 до " + (pointsCount - 1));
         }
 
-        // Проверяем границы
-        if (index > 0 && x <= points[index - 1].getX()) {
+        // Улучшенная проверка с машинным эпсилоном
+        if (index > 0 && x <= points[index - 1].getX() + 1e-10) {
             throw new InappropriateFunctionPointException("Новый X " + x + " должен быть больше чем " + points[index - 1].getX() + " (X левого соседа)");
         }
-        if (index < pointsCount - 1 && x >= points[index + 1].getX()) {
+        if (index < pointsCount - 1 && x >= points[index + 1].getX() - 1e-10) {
             throw new InappropriateFunctionPointException("Новый X " + x + " должен быть меньше чем " + points[index + 1].getX() + " (X правого соседа)");
         }
 
-        points[index].setX(x);  // Устанавливаем новое значение x
+        points[index].setX(x);
     }
 
     // Возвращает координату y точки по индексу
@@ -184,13 +193,16 @@ public class ArrayTabulatedFunction implements TabulatedFunction {
         int insertIndex = 0;
         
         // Ищем позицию для вставки - где X новой точки больше текущего
-        while (insertIndex < pointsCount && points[insertIndex].getX() < point.getX()) {
+        while (insertIndex < pointsCount) {
+            double currentX = points[insertIndex].getX();
+            // Используем машинный эпсилон для сравнения
+            if (Math.abs(currentX - point.getX()) < 1e-10) {
+                throw new InappropriateFunctionPointException("Точка с x=" + point.getX() + " уже существует в функции");
+            }
+            if (currentX > point.getX()) {
+                break;
+            }
             insertIndex++;
-        }
-
-        // Проверяем, нет ли точки с таким же x
-        if (insertIndex < pointsCount && points[insertIndex].getX() == point.getX()) {
-            throw new InappropriateFunctionPointException("Точка с x=" + point.getX() + " уже существует в функции");
         }
 
         // Проверяем нужно ли увеличивать массив

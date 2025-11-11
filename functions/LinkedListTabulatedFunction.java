@@ -17,7 +17,7 @@ public class LinkedListTabulatedFunction implements TabulatedFunction {
         }
         
         // конструктор с точкой и связями
-        FunctionNode(FunctionPoint point, FunctionNode prev, FunctionNode next) {
+        FunctionNode (FunctionPoint point, FunctionNode prev, FunctionNode next) {
             this.point = point;
             this.prev = prev;   
             this.next = next;    
@@ -274,18 +274,16 @@ public class LinkedListTabulatedFunction implements TabulatedFunction {
     }
     
     public void setPoint(int index, FunctionPoint point) throws FunctionPointIndexOutOfBoundsException, InappropriateFunctionPointException {
-        // проверяем индекс
         FunctionNode node = getNodeByIndex(index);
         
-        // проверяем упорядоченность X
-        if (index > 0 && point.getX() <= getNodeByIndex(index - 1).getPoint().getX()) {
+        // проверяем упорядоченность X с машинным эпсилоном
+        if (index > 0 && point.getX() <= getNodeByIndex(index - 1).getPoint().getX() + 1e-10) {
             throw new InappropriateFunctionPointException("X точки должен быть больше предыдущего");
         }
-        if (index < pointsCount - 1 && point.getX() >= getNodeByIndex(index + 1).getPoint().getX()) {
+        if (index < pointsCount - 1 && point.getX() >= getNodeByIndex(index + 1).getPoint().getX() - 1e-10) {
             throw new InappropriateFunctionPointException("X точки должен быть меньше следующего");
         }
         
-        // устанавливаем новую точку
         node.setPoint(new FunctionPoint(point));
     }
     
@@ -298,15 +296,14 @@ public class LinkedListTabulatedFunction implements TabulatedFunction {
         FunctionNode node = getNodeByIndex(index);
         FunctionPoint currentPoint = node.getPoint();
         
-        // проверяем упорядоченность X
-        if (index > 0 && x <= getNodeByIndex(index - 1).getPoint().getX()) {
+        // проверяем упорядоченность X с машинным эпсилоном
+        if (index > 0 && x <= getNodeByIndex(index - 1).getPoint().getX() + 1e-10) {
             throw new InappropriateFunctionPointException("X точки должен быть больше предыдущего");
         }
-        if (index < pointsCount - 1 && x >= getNodeByIndex(index + 1).getPoint().getX()) {
+        if (index < pointsCount - 1 && x >= getNodeByIndex(index + 1).getPoint().getX() - 1e-10) {
             throw new InappropriateFunctionPointException("X точки должен быть меньше следующего");
         }
         
-        // создаем новую точку с обновленным X
         node.setPoint(new FunctionPoint(x, currentPoint.getY()));
     }
     
@@ -374,7 +371,17 @@ public class LinkedListTabulatedFunction implements TabulatedFunction {
             double x1 = getPointX(i);
             double x2 = getPointX(i + 1);
             
-            if (x >= x1 && x <= x2) {
+            // Проверяем совпадение с x1 (используя машинный эпсилон)
+            if (Math.abs(x - x1) < 1e-10) {
+                return getPointY(i);
+            }
+            
+            // Проверяем совпадение с x2 (используя машинный эпсилон)
+            if (Math.abs(x - x2) < 1e-10) {
+                return getPointY(i + 1);
+            }
+            
+            if (x > x1 && x < x2) {
                 // линейная интерполяция
                 double y1 = getPointY(i);
                 double y2 = getPointY(i + 1);
@@ -383,22 +390,5 @@ public class LinkedListTabulatedFunction implements TabulatedFunction {
         }
         
         return Double.NaN;
-    }
-    
-    // Строковое представление функции
-    public String toString() {
-        StringBuilder result = new StringBuilder();
-        FunctionNode current = head.getNext();
-        int count = 0;
-    
-        while (current != head && count < pointsCount) {
-            result.append(current.getPoint().toString());
-            if (count < pointsCount - 1) {
-                result.append("\n");  // Добавляем перевод строки между точками
-            }
-            current = current.getNext();
-            count++;
-        }
-        return result.toString();
     }
 }
